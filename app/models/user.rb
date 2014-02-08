@@ -2,7 +2,7 @@ class User < ActiveRecord::Base
   # Use friendly_id on Users
   extend FriendlyId
   friendly_id :friendify, use: :slugged
-  
+
   # necessary to override friendly_id reserved words
   def friendify
     if username.downcase == "admin"
@@ -11,15 +11,15 @@ class User < ActiveRecord::Base
       "#{username}"
     end
   end
-  
+
   # Include default devise modules. Others available are:
   # :confirmable, :lockable, :timeoutable and :omniauthable
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :trackable, :validatable, :confirmable
-         
+
   # Pagination
   paginates_per 100
-  
+
   # Validations
   # :username
   validates :username, uniqueness: { case_sensitive: false }
@@ -27,11 +27,13 @@ class User < ActiveRecord::Base
   validates :username, length: { in: 4..10 }
   # :email
   validates_format_of :email, with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\Z/i
-  
+
+  after_create :confirm_user_except_production
+
   def self.paged(page_number)
     order(admin: :desc, username: :asc).page page_number
   end
-  
+
   def self.search_and_order(search, page_number)
     if search
       where("username LIKE ?", "%#{search.downcase}%").order(
@@ -41,17 +43,26 @@ class User < ActiveRecord::Base
       order(admin: :desc, username: :asc).page page_number
     end
   end
-  
+
   def self.last_signups(count)
     order(created_at: :desc).limit(count).select("id","username","slug","created_at")
   end
-  
+
   def self.last_signins(count)
-    order(last_sign_in_at: 
+    order(last_sign_in_at:
     :desc).limit(count).select("id","username","slug","last_sign_in_at")
   end
-  
+
   def self.users_count
     where("admin = ? AND locked = ?",false,false).count
+  end
+
+private
+
+  def confirm_user_except_production
+    if Rails.env == 'development'
+      self.skip_confirmation!
+      self.save
+    end
   end
 end
