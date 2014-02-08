@@ -48,4 +48,8 @@ end
 # Capybara
 group :test do
   gem "capybara", '~> 2.2.1'
+  gem 'cucumber-rails', :require => false
+  gem 'database_cleaner'
+  gem 'email_spec'
+  gem 'launchy'
 end
